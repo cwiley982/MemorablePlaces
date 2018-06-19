@@ -13,6 +13,7 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -54,11 +55,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                // move marker and camera
-                mMap.clear();
                 LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                mMap.addMarker(new MarkerOptions().position(latLng));
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
+                updateMapView(latLng, true);
             }
 
             @Override
@@ -81,14 +79,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //check the focus extra added to intent to see where to focus
         String focus = getIntent().getStringExtra("FOCUS");
         if (focus.equals("USER")) {
-            //focus on user
+            // if location permission not granted, ask for it
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
+                ActivityCompat.requestPermissions(this, permissions, 0);
+                return;
+            }
+            // focus on user's last known location
+            Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            if (location != null) {
+                LatLng user = new LatLng(location.getLatitude(), location.getLongitude());
+                updateMapView(user, false);
+            }
         } else {
-            //focus on the location clicked on
+            //focus on the location user clicked on
             int position = Integer.parseInt(focus);
-
+            updateMapView(locations.get(position), true);
         }
     }
 
+    /**
+     * Update the camera and add a marker if needed
+     * @param latLng
+     * @param marker
+     */
+    private void updateMapView(LatLng latLng, boolean marker) {
+        // move marker and camera
+        mMap.clear();
+        if (marker) {
+            mMap.addMarker(new MarkerOptions().position(latLng));
+        }
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15));
+    }
 
     /**
      * Manipulates the map once available.
@@ -105,25 +127,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
             @Override
             public void onMapLongClick(LatLng latLng) {
-                // Add a marker
+                // Add a marker and add latlng to array
                 locations.add(latLng);
                 mMap.addMarker(new MarkerOptions().position(latLng).title(getAddress(latLng)));
-
-                // possibly save all locations in this class, and just pass back an array to main activity?
-                // main class doesn't need actual location data, just addresses to show in list
             }
         });
 
         // ask for permission if we don't have it
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-
             String[] permissions = {Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
             ActivityCompat.requestPermissions(this, permissions, 0);
             return;
@@ -136,7 +147,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
     }
 
-    // get the address string (first line) from the location using geocoder
+    // get the address string (first line) from the location using geocoder and adds it to the array of addresses
     private String getAddress(LatLng latLng) {
         try {
             List<Address> addrs = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
@@ -161,15 +172,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
+            //Toast.makeText(getApplicationContext(), "This app won't work without permission to access your location.", Toast.LENGTH_LONG).show();
+            ActivityCompat.requestPermissions(this, permissions, 0);
             return;
         }
+
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
     }
 

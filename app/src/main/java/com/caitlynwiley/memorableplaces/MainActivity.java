@@ -15,6 +15,7 @@ public class MainActivity extends AppCompatActivity {
 
     ListView placesListView;
     List<String> addresses = new ArrayList<String>();
+    ArrayAdapter<String> adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,7 +25,7 @@ public class MainActivity extends AppCompatActivity {
         placesListView = findViewById(R.id.placesListView);
         addresses.add("Add a new place...");
 
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_list_item_1, addresses);
+        adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, addresses);
         placesListView.setAdapter(adapter);
 
         placesListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -35,12 +36,10 @@ public class MainActivity extends AppCompatActivity {
                     Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
                     intent.putExtra("FOCUS", "USER");
                     startActivity(intent);
-                    Bundle b = new Bundle();
                 } else {
                     //open map activity centered on the location the user clicked on
                     Intent intent = new Intent(getApplicationContext(), MapsActivity.class);
                     intent.putExtra("FOCUS", ((Integer) position).toString());
-                    //maybe also put lat/long and address/name so MapsActivity can get it from the intent
                     startActivity(intent);
                 }
             }
@@ -52,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
 
         addresses = data.getStringArrayListExtra("PLACES");
-
-        //TODO: now update the list view if it doesn't automatically?
+        adapter.notifyDataSetChanged();
     }
 }
