@@ -10,6 +10,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
@@ -74,8 +76,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         };
+    }
 
-
+    private void initMap() {
         //check the focus extra added to intent to see where to focus
         String focus = getIntent().getStringExtra("FOCUS");
         if (focus.equals("USER")) {
@@ -104,6 +107,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * @param marker
      */
     private void updateMapView(LatLng latLng, boolean marker) {
+        if (mMap == null) {
+            return;
+        }
         // move marker and camera
         mMap.clear();
         if (marker) {
@@ -145,10 +151,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             locationListener.onLocationChanged(location);
         }
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+
+        // Allow user to click to go to their location
+        mMap.setMyLocationEnabled(true);
+        mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener() {
+            @Override
+            public boolean onMyLocationButtonClick() {
+                CameraPosition pos = mMap.getCameraPosition();
+                updateMapView(pos.target, true);
+                return false;
+            }
+        });
+
+        initMap();
     }
 
     // get the address string (first line) from the location using geocoder and adds it to the array of addresses
-    private String getAddress(LatLng latLng) {
+    private String getAddress(@NonNull LatLng latLng) {
         try {
             List<Address> addrs = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
             if (addrs.size() != 0) {
